@@ -1,68 +1,122 @@
 <?php
-require_once("../includes/db_config.php");
+include_once("../includes/db_config.php");
 session_start();
 
 if (!isset($_SESSION['email'])) {
-  header("Location: ../index.php");
-  exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-  $name        = trim($_POST['name']);
-  $description = trim($_POST['description']);
-  $brand_id    = (int) $_POST['brand_id'];
-  $category_id = (int) $_POST['category_id'];
-
-  // ---------- INSERT PRODUCT ----------
-  $stmt = $db->prepare("
-    INSERT INTO products (brand_id, category_id, name, description, status, created_at)
-    VALUES (?, ?, ?, ?, 1, NOW())
-  ");
-
-  $stmt->bind_param("iiss", $brand_id, $category_id, $name, $description);
-  $stmt->execute();
-
-  $product_id = $stmt->insert_id;
-  $stmt->close();
-
-  // ---------- IMAGE UPLOAD ----------
-  if (!empty($_FILES['image']['name']) && $product_id > 0) {
-
-    $upload_dir = "../uploads/products/";
-    if (!is_dir($upload_dir)) {
-      mkdir($upload_dir, 0755, true);
-    }
-
-    $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-    $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-
-    if (in_array($ext, $allowed)) {
-
-      $file_name = uniqid('product_', true) . '.' . $ext;
-      $full_path = $upload_dir . $file_name;
-
-      if (move_uploaded_file($_FILES['image']['tmp_name'], $full_path)) {
-
-        $image_path = "uploads/products/" . $file_name;
-
-        $imgStmt = $db->prepare("
-          INSERT INTO product_images (product_id, image_path, is_primary, created_at)
-          VALUES (?, ?, 1, NOW())
-        ");
-
-        $imgStmt->bind_param("is", $product_id, $image_path);
-        $imgStmt->execute();
-        $imgStmt->close();
-      }
-    }
-  }
-
   header("Location: index.php");
   exit;
 }
 
+$name = $description = '';
+$brand_id = $category_id = 0;
+$image_path = '';
+$edit_mode = false;
+$product_id = null;
+
+/* ------------------ EDIT MODE ------------------ */
+if (isset($_GET['id'])) {
+  $edit_mode = true;
+  $product_id = (int)$_GET['id'];
+
+  $stmt = $db->prepare("
+    SELECT 
+      p.*, 
+      pi.image_path
+    FROM products p
+    LEFT JOIN product_images pi 
+      ON pi.product_id = p.id AND pi.is_primary = 1
+    WHERE p.id = ?
+  ");
+  $stmt->bind_param("i", $product_id);
+  $stmt->execute();
+  $product = $stmt->get_result()->fetch_object();
+
+  if (!$product) {
+    header("Location: index.php");
+    exit;
+  }
+
+  $name        = $product->name;
+  $description = $product->description;
+  $brand_id    = $product->brand_id;
+  $category_id = $product->category_id;
+  $image_path  = $product->image_path;
+}
+
+/* ------------------ FORM SUBMIT ------------------ */
+if (isset($_POST['submit'])) {
+
+  $name        = trim($_POST['name']);
+  $description = trim($_POST['description']);
+  $brand_id    = (int)$_POST['brand_id'];
+  $category_id = (int)$_POST['category_id'];
+
+  $db->begin_transaction();
+
+  try {
+
+    /* ---------- INSERT / UPDATE PRODUCT ---------- */
+    if ($edit_mode) {
+      $stmt = $db->prepare("
+        UPDATE products 
+        SET name=?, description=?, brand_id=?, category_id=?
+        WHERE id=?
+      ");
+      $stmt->bind_param("ssiii", $name, $description, $brand_id, $category_id, $product_id);
+      $stmt->execute();
+    } else {
+      $stmt = $db->prepare("
+        INSERT INTO products (name, description, brand_id, category_id, status)
+        VALUES (?, ?, ?, ?, 1)
+      ");
+      $stmt->bind_param("ssii", $name, $description, $brand_id, $category_id);
+      $stmt->execute();
+      $product_id = $stmt->insert_id;
+    }
+
+    /* ---------- IMAGE UPLOAD ---------- */
+    if (!empty($_FILES['image']['name'])) {
+
+      $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+      $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+
+      if (!in_array($ext, $allowed)) {
+        throw new Exception("Invalid image format");
+      }
+
+      $upload_dir = "../uploads/products/";
+      if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0755, true);
+      }
+
+      $filename = uniqid("product_", true) . "." . $ext;
+      $full_path = $upload_dir . $filename;
+
+      move_uploaded_file($_FILES['image']['tmp_name'], $full_path);
+      $db_path = "uploads/products/" . $filename;
+
+      // Remove old primary image
+      $db->query("UPDATE product_images SET is_primary = 0 WHERE product_id = $product_id");
+
+      // Insert new primary image
+      $stmt = $db->prepare("
+        INSERT INTO product_images (product_id, image_path, is_primary)
+        VALUES (?, ?, 1)
+      ");
+      $stmt->bind_param("is", $product_id, $db_path);
+      $stmt->execute();
+    }
+
+    $db->commit();
+    header("Location: index.php");
+    exit;
+  } catch (Exception $e) {
+    $db->rollback();
+    die("Error: " . $e->getMessage());
+  }
+}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -154,18 +208,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                   <form method="post" enctype="multipart/form-data" class="custom-form">
 
-                    <h5 class="mb-4 text-center fw-bold">Add Product</h5>
+                    <h5 class="mb-4 text-center fw-bold"><?= $edit_mode ? "Edit Product" : "Add Product" ?></h5>
 
                     <!-- Name -->
                     <div class="mb-3">
                       <label class="form-label">Name</label>
-                      <input type="text" name="name" class="form-control" placeholder="Enter product name" required>
+                      <input type="text" name="name" class="form-control" placeholder="Enter product name"
+                        value="<?= isset($name) ? htmlspecialchars($name) : '' ?>" required>
                     </div>
 
                     <!-- Description -->
                     <div class="mb-3">
                       <label class="form-label">Description</label>
-                      <textarea name="description" class="form-control" rows="3" placeholder="Enter product description"></textarea>
+                      <textarea name="description" class="form-control" rows="3" placeholder="Enter product description"><?= isset($description) ? htmlspecialchars($description) : '' ?></textarea>
                     </div>
 
                     <!-- Brand -->
@@ -176,8 +231,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php
                         $b = $db->query("SELECT id, name FROM brands WHERE status = 1");
                         while ($r = $b->fetch_object()):
+                          $selected = (isset($brand_id) && $brand_id == $r->id) ? 'selected' : '';
                         ?>
-                          <option value="<?= $r->id ?>"><?= htmlspecialchars($r->name) ?></option>
+                          <option value="<?= $r->id ?>" <?= $selected ?>><?= htmlspecialchars($r->name) ?></option>
                         <?php endwhile; ?>
                       </select>
                     </div>
@@ -190,8 +246,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php
                         $c = $db->query("SELECT id, name FROM categories WHERE status = 1");
                         while ($r = $c->fetch_object()):
+                          $selected = (isset($category_id) && $category_id == $r->id) ? 'selected' : '';
                         ?>
-                          <option value="<?= $r->id ?>"><?= htmlspecialchars($r->name) ?></option>
+                          <option value="<?= $r->id ?>" <?= $selected ?>><?= htmlspecialchars($r->name) ?></option>
                         <?php endwhile; ?>
                       </select>
                     </div>
@@ -200,15 +257,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="mb-4">
                       <label class="form-label">Product Image</label>
                       <input type="file" name="image" class="form-control" accept="image/*" onchange="previewImage(event)">
-                      <img id="imgPreview" src="#" alt="Image Preview" style="display: none;">
+
+                      <img id="imgPreview"
+                        src="<?= $image_path ? '../' . htmlspecialchars($image_path) : '#' ?>"
+                        style="<?= $image_path ? 'display:block;' : 'display:none;' ?> max-width:200px;margin-top:10px;">
                     </div>
+
 
                     <!-- Submit -->
                     <div class="d-grid">
-                      <button type="submit" name="submit" class="btn btn-primary">Save Product</button>
+                      <button type="submit" name="submit" class="btn btn-primary"><?= $edit_mode ? "Update Product" : "Save Product" ?></button>
                     </div>
 
                   </form>
+
+                  <script>
+                    function previewImage(event) {
+                      const preview = document.getElementById('imgPreview');
+                      const file = event.target.files[0];
+
+                      if (file) {
+                        preview.src = URL.createObjectURL(file);
+                        preview.style.display = 'block';
+                      }
+                    }
+                  </script>
+
 
                 </div>
               </div>

@@ -53,48 +53,102 @@ if (!isset($_SESSION['email'])) {
               </div>
             </div>
 
-            <!-- Table -->
+            <!-- Products Table -->
             <div class="card-body px-4 pb-2">
               <div class="table-responsive p-0">
-                <div class="table-responsive">
-                  <table class="table align-items-center mb-0">
+                <table class="table align-items-center mb-0">
+                  <thead>
                     <tr>
-                      <th>Id</th>
+                      <th>#</th>
                       <th>Image</th>
                       <th>Name</th>
                       <th>Brand</th>
                       <th>Category</th>
                       <th>Status</th>
-                      <th>Quantity In Stock </th>
-                      <th colspan="4">Action</th>
+                      <th>Quantity In Stock</th>
+                      <th colspan="2">Action</th>
                     </tr>
+                  </thead>
+                  <tbody>
 
                     <?php
-                    $sql = "SELECT p.*, b.name brand, c.name category
-                    FROM products p
-                    JOIN brands b ON p.brand_id=b.id
-                    JOIN categories c ON p.category_id=c.id";
+                    $sql = "
+                      SELECT 
+                        p.*,
+                        b.name AS brand,
+                        c.name AS category,
+                        pi.image_path
+                      FROM products p
+                      JOIN brands b ON p.brand_id = b.id
+                      JOIN categories c ON p.category_id = c.id
+                      LEFT JOIN product_images pi 
+                        ON pi.product_id = p.id AND pi.is_primary = 1
+                    ";
 
                     $res = $db->query($sql);
+                    $cnt = 1;
+
                     while ($row = $res->fetch_object()):
                     ?>
                       <tr>
-                        <td>233</td>
-                        <td>Image</td>
-                        <td>Fair & Lovely FaceWash</td>
-                        <td>Fair & Lovely</td>
-                        <td>Skincare</td>
-                        <td>active</td>
-                        <td>2,000</td>
-                        <td>Btns</td>
+                        <td><?= $cnt++ ?></td>
+
+                        <!-- Image -->
+                        <td>
+                          <?php if (!empty($row->image_path)): ?>
+                            <img
+                              src="../<?= htmlspecialchars($row->image_path) ?>"
+                              alt="<?= htmlspecialchars($row->name) ?>"
+                              style="width:50px;height:50px;object-fit:cover;border-radius:4px;">
+                          <?php else: ?>
+                            <span class="text-muted">No Image</span>
+                          <?php endif; ?>
+                        </td>
+
+                        <td><?= htmlspecialchars($row->name) ?></td>
+                        <td><?= htmlspecialchars($row->brand) ?></td>
+                        <td><?= htmlspecialchars($row->category) ?></td>
+
+                        <!-- Status -->
+                        <td>
+                          <?= $row->status == 1
+                            ? '<span class="badge bg-success">Active</span>'
+                            : '<span class="badge bg-secondary">Inactive</span>' ?>
+                        </td>
+
+                        <!-- Quantity -->
+                        <td>
+                          <?= number_format((int)($row->quantity_in_stock ?? 0)) ?>
+                        </td>
+
+                        <!-- Actions -->
+                        <td>
+                          <a href="edit.php?id=<?= $row->id ?>" class="btn btn-sm btn-primary">Edit</a>
+                        </td>
+                        <td>
+                          <a href="delete.php?id=<?= $row->id ?>"
+                            onclick="return confirm('Are you sure?')"
+                            class="btn btn-sm btn-danger">Delete</a>
+                        </td>
                       </tr>
                     <?php endwhile; ?>
-                  </table>
-                </div>
+
+                    <?php if ($res->num_rows === 0): ?>
+                      <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                          No products found
+                        </td>
+                      </tr>
+                    <?php endif; ?>
+
+                  </tbody>
+                </table>
               </div>
             </div>
 
 
+
+            <!-- Add Product -->
             <div class="d-flex justify-content-end px-4 pt-2">
               <a href="entry.php" class="btn btn-primary">
                 Add Product
