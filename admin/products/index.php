@@ -124,8 +124,7 @@ if (!isset($_SESSION['email'])) {
                         <!-- Actions -->
                         <td>
                           <a href="edit.php?id=<?= $row->id ?>" class="btn btn-sm btn-primary">Edit</a>
-                        </td>
-                        <td>
+
                           <a href="delete.php?id=<?= $row->id ?>"
                             onclick="return confirm('Are you sure?')"
                             class="btn btn-sm btn-danger">Delete</a>
