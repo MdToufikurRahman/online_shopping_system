@@ -68,9 +68,26 @@ $rawData = $db->query($sql);
               <a href="add_user.php" class="btn btn-success my-2">+ Add User</a>
             </div>
 
+
+
             <!-- Table -->
             <div class="card-body px-0 pb-2 px-3">
               <div class="table-responsive p-0">
+
+                <?php if (!empty($_SESSION['success'])): ?>
+                  <div class="alert alert-success text-white">
+                    <?= htmlspecialchars($_SESSION['success']) ?>
+                  </div>
+                  <?php unset($_SESSION['success']); ?>
+                <?php endif; ?>
+
+                <?php if (!empty($_SESSION['error'])): ?>
+                  <div class="alert alert-danger text-white">
+                    <?= htmlspecialchars($_SESSION['error']) ?>
+                  </div>
+                  <?php unset($_SESSION['error']); ?>
+                <?php endif; ?>
+
 
                 <div class="table-responsive">
                   <table class="table align-items-center mb-0">
@@ -94,9 +111,9 @@ $rawData = $db->query($sql);
                           <td><?php echo ($row->status == 1) ? "Active" : "Inactive"; ?></td>
                           <!-- Actions -->
                           <td>
-                            <a href="edit.php?id=<?= $row->id ?>" class="btn btn-sm btn-primary">Edit</a>
+                            <a href="edit_user.php?id=<?= $row->id ?>" class="btn btn-sm btn-primary">Edit</a>
 
-                            <a href="delete.php?id=<?= $row->id ?>"
+                            <a href="delete_user.php?id=<?= $row->id ?>"
                               onclick="return confirm('Are you sure?')"
                               class="btn btn-sm btn-danger">Delete</a>
                           </td>
