@@ -85,7 +85,7 @@ if (!isset($_SESSION['email'])) {
                         <th>Name</th>
                         <th>Description</th>
                         <th>Status</th>
-                        <th colspan="3">Action</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
 
@@ -96,7 +96,7 @@ if (!isset($_SESSION['email'])) {
                       <tr>
                         <td><?= $row->id ?></td>
                         <td><?= $row->name ?></td>
-                        <td><?= $row->description ?></td>
+                        <td><?= $row->description ?? "No Description Provided" ?></td>
                         <td><?= $row->status ?></td>
                         <td>
                           <a class="btn btn-sm btn-primary" href="edit.php?id=<?= $row->id ?>">Edit</a>
@@ -107,7 +107,6 @@ if (!isset($_SESSION['email'])) {
                     <?php endwhile; ?>
                   </table>
 
-                  <a href="entry.php">Add Category</a>
                   <?php $db->close(); ?>
                 </div>
               </div>
@@ -116,7 +115,7 @@ if (!isset($_SESSION['email'])) {
         </div>
 
         <!-- Footer -->
-        <?php include_once("includes/footer.php") ?>
+        <?php include_once("../includes/footer.php") ?>
       </div>
   </main>
 
