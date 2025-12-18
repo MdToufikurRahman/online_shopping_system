@@ -1,6 +1,12 @@
 <?php
 include "includes/db_config.php";
 
+session_start();
+if (!isset($_SESSION['email'])) {
+  header("Location: index.php");
+  exit();
+}
+
 $search = "";
 $where = "";
 
@@ -41,10 +47,16 @@ $rawData = $db->query($sql);
 </head>
 
 <body class="g-sidenav-show  bg-gray-100">
+
+  <!-- Sidebar -->
   <?php include_once("includes/sidebar.php") ?>
+
+  <!-- Main Content -->
   <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg ">
+    
     <!-- Navbar -->
     <?php include_once("includes/navbar.php") ?>
+
     <!-- End Navbar -->
     <div class="container-fluid py-2">
       <div class="row">
@@ -54,7 +66,7 @@ $rawData = $db->query($sql);
             <!-- Card Header -->
             <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
               <div class="bg-gradient-dark shadow-dark border-radius-lg pt-4 pb-3">
-                <h6 class="text-white text-capitalize ps-3">Clients table</h6>
+                <h6 class="text-white text-capitalize ps-3">Clients Table</h6>
               </div>
             </div>
 
@@ -67,8 +79,6 @@ $rawData = $db->query($sql);
 
               <a href="add_user.php" class="btn btn-success my-2">+ Add User</a>
             </div>
-
-
 
             <!-- Table -->
             <div class="card-body px-0 pb-2 px-3">
@@ -129,6 +139,7 @@ $rawData = $db->query($sql);
           </div>
         </div>
 
+        <!-- Footer -->
         <?php include_once("includes/footer.php") ?>
       </div>
   </main>
