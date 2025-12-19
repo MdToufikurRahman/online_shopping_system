@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Back Button -->
                 <a
-                  href="users.php"
+                  href="index.php"
                   class="btn btn-sm btn-outline-light ms-3 me-2 mt-3">
                   <i class="fas fa-arrow-left me-1"></i> Back
                 </a>

@@ -117,6 +117,7 @@ if (!isset($_SESSION['email'])) {
         <!-- Footer -->
         <?php include_once("../includes/footer.php") ?>
       </div>
+    </div>
   </main>
 
 
