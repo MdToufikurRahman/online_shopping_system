@@ -83,7 +83,7 @@ function isActive($pagePath)
 
       <!-- Profile -->
       <li class="nav-item">
-        <a class="nav-link <?= isActive('profile.php') ?>" href="<?= DIR ?>pages/profile.php">
+        <a class="nav-link <?= isActive('profile.php') ?>" href="<?= DIR ?>profile.php">
           <i class="material-symbols-rounded opacity-5">person</i>
           <span class="nav-link-text ms-1">Profile</span>
         </a>
@@ -99,13 +99,4 @@ function isActive($pagePath)
 
     </ul>
   </div>
-
-  <!-- Sidenav Footer -->
-  <div class="sidenav-footer position-absolute w-100 bottom-0">
-    <div class="mx-3">
-      <a class="btn btn-outline-dark mt-4 w-100" href="https://www.creative-tim.com/learning-lab/bootstrap/overview/material-dashboard?ref=sidebarfree" type="button">Documentation</a>
-      <a class="btn bg-gradient-dark w-100" href="https://www.creative-tim.com/product/material-dashboard-pro?ref=sidebarfree" type="button">Upgrade to pro</a>
-    </div>
-  </div>
-
 </aside>
